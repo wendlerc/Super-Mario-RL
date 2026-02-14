@@ -4,13 +4,19 @@ Video Dataset Generator for Super Mario RL
 Records gameplay with annotated actions for training data
 """
 
-import gym_super_mario_bros
 import gymnasium as gym
 import numpy as np
 import torch
 import cv2
-from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
-from nes_py.wrappers import JoypadSpace
+try:
+    import gym_super_mario_bros
+    from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
+    from nes_py.wrappers import JoypadSpace
+except ImportError:
+    # Fallback for gymnasium compatibility
+    import gym_super_mario_bros
+    from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
+    from nes_py.wrappers import JoypadSpace
 from wrappers import wrap_mario
 from ppo import ActorCritic
 import os
