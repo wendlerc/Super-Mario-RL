@@ -84,14 +84,26 @@ python eval.py your_own_agent.pth
 
 Generate gameplay videos with annotated actions for training datasets.
 
-### Generate a single video (2 minutes)
+### Quick Start
+
+1. **Setup environment:**
+```bash
+bash setup.sh
 ```
-python video_generator.py --videos 1 --duration 2
+
+2. **Test the setup:**
+```bash
+python3 test_setup.py
+```
+
+3. **Generate a single video (2 minutes):**
+```bash
+python3 video_generator.py --videos 1 --duration 2
 ```
 
 ### Generate multiple videos for dataset
-```
-python video_generator.py --videos 10 --duration 5
+```bash
+python3 video_generator.py --videos 10 --duration 5
 ```
 
 ### Video annotations include:
