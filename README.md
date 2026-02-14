@@ -80,6 +80,46 @@ python eval.py
 python eval.py your_own_agent.pth
 ```
 
+## Video Dataset Generation
+
+Generate gameplay videos with annotated actions for training datasets.
+
+### Generate a single video (2 minutes)
+```
+python video_generator.py --videos 1 --duration 2
+```
+
+### Generate multiple videos for dataset
+```
+python video_generator.py --videos 10 --duration 5
+```
+
+### Video annotations include:
+- **Action display**: Current button presses (UP, DOWN, LEFT, RIGHT, A, B)
+- **Reward tracking**: Real-time reward values
+- **Game state**: Stage, score, coins, lives
+- **Position**: X-coordinate progress
+- **Visual indicators**: Button press visualization
+
+Videos are saved to `videos/` directory with timestamps.
+
+### Requirements
+```
+pip install -r requirements.txt
+```
+
+### Example output
+```
+Recording 2 minutes of gameplay...
+Output: videos/mario_gameplay_20250214_203456.mp4
+Progress: 50.0% - Reward: 1250.50 - Stage: 1
+
+Video saved to: videos/mario_gameplay_20250214_203456.mp4
+Total frames: 3600
+Total reward: 2847.32
+Duration: 120.0 seconds
+```
+
 ## Reference
 [Wang, Ziyu, et al. "Dueling network architectures for deep reinforcement learning." International conference on machine learning. PMLR, 2016.](https://arxiv.org/pdf/1511.06581.pdf)
 
