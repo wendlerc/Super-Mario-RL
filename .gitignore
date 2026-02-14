@@ -1,4 +1,2 @@
-__pycache__
-*.gif
-*.pth
-*.p
+videos/
+*.mp4
