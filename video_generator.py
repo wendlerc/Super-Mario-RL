@@ -202,7 +202,7 @@ def generate_video(model, duration_minutes=2, output_filename=None):
     print(f"Recording {duration_minutes} minutes of gameplay...")
     print(f"Output: videos/{output_filename}")
     
-    while not done and frames_captured < max_frames:
+    while frames_captured < max_frames:
         # Convert observation to tensor
         obs_tensor = torch.tensor(np.array(obs), dtype=torch.float32).unsqueeze(0).to(device)
         
@@ -215,6 +215,11 @@ def generate_video(model, duration_minutes=2, output_filename=None):
         # Step environment
         obs, reward, done, info = env.step(action)
         total_reward += reward
+        
+        # Reset if Mario dies, but continue recording
+        if done:
+            obs = env.reset()
+            done = False
         
         # Get raw frame for video (render)
         frame = env.render(mode='rgb_array')
