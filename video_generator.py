@@ -20,8 +20,18 @@ except ImportError:
     from nes_py.wrappers import JoypadSpace
 from wrappers import wrap_mario
 from ppo import ActorCritic
+from duel_dqn import model as DQNModel
 import os
 from datetime import datetime
+
+# Import arange function from eval.py logic
+def arange(s):
+    """Convert observation to proper format for DQN"""
+    if not isinstance(s, np.ndarray):
+        s = np.array(s)
+    assert len(s.shape) == 3
+    ret = np.transpose(s, (2, 0, 1))
+    return np.expand_dims(ret, 0)
 
 device = "cpu"
 if torch.cuda.is_available():
@@ -31,6 +41,7 @@ elif torch.backends.mps.is_available():
 
 # Action names for annotation
 ACTION_NAMES = COMPLEX_MOVEMENT
+
 
 class VideoRecorder:
     def __init__(self, output_dir="videos", fps=30):
@@ -151,12 +162,35 @@ class VideoRecorder:
 
 
 def load_model(model_path="mario_1_1_ppo.pt"):
-    """Load the trained PPO model"""
-    model = ActorCritic(n_frame=4, act_dim=12).to(device)
+    """Load the trained model (supports both DQN and PPO)"""
+    
+    # Determine model type from filename
+    is_dqn = "q_target" in model_path or "duel" in model_path.lower()
+    
+    if is_dqn:
+        print(f"Loading DQN model from {model_path}")
+        model = DQNModel(n_frame=4, n_action=12, device=device).to(device)
+    else:
+        print(f"Loading PPO model from {model_path}")
+        model = ActorCritic(n_frame=4, act_dim=12).to(device)
     
     if os.path.exists(model_path):
-        print(f"Loading model from {model_path}")
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        try:
+            state_dict = torch.load(model_path, map_location=device)
+            model.load_state_dict(state_dict)
+            print(f"✓ Model loaded successfully ({'DQN' if is_dqn else 'PPO'})")
+        except Exception as e:
+            print(f"⚠️  Error loading with {'DQN' if is_dqn else 'PPO'}: {e}")
+            # Try the other model type
+            if is_dqn:
+                print("Trying PPO instead...")
+                model = ActorCritic(n_frame=4, act_dim=12).to(device)
+            else:
+                print("Trying DQN instead...")
+                model = DQNModel(n_frame=4, n_action=12, device=device).to(device)
+            state_dict = torch.load(model_path, map_location=device)
+            model.load_state_dict(state_dict)
+            print(f"✓ Model loaded successfully (auto-detected)")
     else:
         print(f"Warning: Model file {model_path} not found. Using random initialization.")
     
@@ -207,11 +241,19 @@ def generate_video(model, duration_minutes=2, output_filename=None):
         # Convert observation to tensor
         obs_tensor = torch.tensor(np.array(obs), dtype=torch.float32).unsqueeze(0).to(device)
         
-        # Get action from model
+        # Get action from model (handles both DQN and PPO)
         with torch.no_grad():
-            logits, _ = model(obs_tensor)
-            dist = torch.distributions.Categorical(logits=logits)
-            action = dist.probs.argmax(dim=-1).item()
+            if isinstance(model, DQNModel):
+                # DQN: use arange to preprocess observation
+                s = arange(obs)
+                q_values = model(s)
+                action = q_values.argmax(dim=-1).item()
+            else:
+                # PPO: standard tensor input
+                obs_tensor = torch.tensor(np.array(obs), dtype=torch.float32).unsqueeze(0).to(device)
+                logits, _ = model(obs_tensor)
+                dist = torch.distributions.Categorical(logits=logits)
+                action = dist.probs.argmax(dim=-1).item()
         
         # Step environment
         obs, reward, done, info = env.step(action)
