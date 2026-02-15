@@ -82,7 +82,21 @@ python eval.py your_own_agent.pth
 
 ## Video Dataset Generation
 
-Generate gameplay videos with annotated actions for training datasets.
+Generate gameplay videos with annotated actions for training datasets. Videos are generated using the trained agent policies and include real-time annotations.
+
+### Available Models
+
+Two pre-trained models are included:
+
+- **DQN Policy** (`mario_q_target.pth`) - **RECOMMENDED** ✅
+  - Trained for 7,000 epochs with dueling network
+  - Better performance and stability
+  - Default for video generation
+
+- **PPO Policy** (`mario_1_1_ppo.pt`) - **CORRUPTED** ⚠️
+  - Pre-trained PPO agent
+  - May have early stopping issues
+  - Use only if DQN not available
 
 ### Quick Start
 
@@ -112,6 +126,20 @@ python3 video_generator.py --videos 10 --duration 5
 - **Game state**: Stage, score, coins, lives
 - **Position**: X-coordinate progress
 - **Visual indicators**: Button press visualization
+- **Continuous gameplay**: Mario respawns when dying (no early stopping)
+
+### Usage Examples
+
+```bash
+# Generate 5 videos, 2 minutes each
+python3 video_generator.py --videos 5 --duration 2
+
+# Generate single 30-second video
+python3 video_generator.py --videos 1 --duration 0.5
+
+# Use specific model
+python3 video_generator.py --videos 1 --duration 2 --model mario_q_target.pth
+```
 
 Videos are saved to `videos/` directory with timestamps.
 
