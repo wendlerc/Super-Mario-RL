@@ -7,6 +7,7 @@ Records gameplay with annotated actions for training data
 import gymnasium as gym
 import numpy as np
 import torch
+import torch.nn as nn
 import cv2
 try:
     import gym_super_mario_bros
@@ -149,55 +150,13 @@ class VideoRecorder:
         ]
 
 
-class DQNModel(nn.Module):
-    """DQN Model for loading q_target.pth"""
-    def __init__(self, n_frame=4, n_action=12):
-        super(DQNModel, self).__init__()
-        self.layer1 = nn.Conv2d(n_frame, 32, 8, 4)
-        self.layer2 = nn.Conv2d(32, 64, 3, 1)
-        self.fc = nn.Linear(20736, 512)
-        self.q = nn.Linear(512, n_action)
-        self.v = nn.Linear(512, 1)
-
-    def forward(self, x):
-        if type(x) != torch.Tensor:
-            x = torch.FloatTensor(x).to(device)
-        if x.dim() == 4 and x.shape[-1] == 4:
-            x = x.permute(0, 3, 1, 2)
-        x = torch.relu(self.layer1(x))
-        x = torch.relu(self.layer2(x))
-        x = x.view(-1, 20736)
-        x = torch.relu(self.fc(x))
-        adv = self.q(x)
-        v = self.v(x)
-        q = v + (adv - 1 / adv.shape[-1] * adv.sum(-1, keepdim=True))
-        return q
-
-
-def load_model(model_path="mario_q_target.pth"):
-    """Load the trained model (auto-detects PPO or DQN)"""
-    
-    # Try DQN first (recommended by README)
-    if "q_target" in model_path or "duel" in model_path.lower():
-        print(f"Loading DQN model from {model_path}")
-        model = DQNModel(n_frame=4, n_action=12).to(device)
-    else:
-        print(f"Loading PPO model from {model_path}")
-        model = ActorCritic(n_frame=4, act_dim=12).to(device)
+def load_model(model_path="mario_1_1_ppo.pt"):
+    """Load the trained PPO model"""
+    model = ActorCritic(n_frame=4, act_dim=12).to(device)
     
     if os.path.exists(model_path):
-        try:
-            model.load_state_dict(torch.load(model_path, map_location=device))
-            print(f"✓ Model loaded successfully")
-        except Exception as e:
-            print(f"⚠️  Error loading model: {e}")
-            print(f"Trying alternative model type...")
-            # Try the other model type
-            if isinstance(model, DQNModel):
-                model = ActorCritic(n_frame=4, act_dim=12).to(device)
-            else:
-                model = DQNModel(n_frame=4, n_action=12).to(device)
-            model.load_state_dict(torch.load(model_path, map_location=device))
+        print(f"Loading model from {model_path}")
+        model.load_state_dict(torch.load(model_path, map_location=device))
     else:
         print(f"Warning: Model file {model_path} not found. Using random initialization.")
     
@@ -248,16 +207,11 @@ def generate_video(model, duration_minutes=2, output_filename=None):
         # Convert observation to tensor
         obs_tensor = torch.tensor(np.array(obs), dtype=torch.float32).unsqueeze(0).to(device)
         
-        # Get action from model (handles both PPO and DQN)
+        # Get action from model
         with torch.no_grad():
-            output = model(obs_tensor)
-            if isinstance(model, DQNModel):
-                # DQN outputs Q-values, take argmax
-                action = output.argmax(dim=-1).item()
-            else:
-                # PPO outputs logits
-                dist = torch.distributions.Categorical(logits=output)
-                action = dist.probs.argmax(dim=-1).item()
+            logits, _ = model(obs_tensor)
+            dist = torch.distributions.Categorical(logits=logits)
+            action = dist.probs.argmax(dim=-1).item()
         
         # Step environment
         obs, reward, done, info = env.step(action)
